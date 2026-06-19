@@ -18,7 +18,7 @@ import readline from "readline/promises";
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
-    docsDir: "./markdown_files",
+    docsDir: "./examples/markdown_files",
     port: "8080",
     model: "mlx-community/Qwen3.5-9B-4bit",
     temperature: 0.2
@@ -46,7 +46,7 @@ function printHelp() {
   console.log(chalk.bold.cyan("\nMD-Crawler: Token-Efficient Local Doc Agent"));
   console.log("Usage: node src/cli.js [options]");
   console.log("\nOptions:");
-  console.log("  -d, --docs-dir <path>   Path to the markdown docs folder (default: ./markdown_files)");
+  console.log("  -d, --docs-dir <path>   Path to the markdown docs folder (default: ./examples/markdown_files)");
   console.log("  -p, --port <number>     Port of the local MLX/OpenAI server (default: 8080)");
   console.log("  -m, --model <name>      Model name to target on the server (default: mlx-community/Qwen3.5-9B-4bit)");
   console.log("  -t, --temperature <num> Model generation temperature (default: 0.2)");

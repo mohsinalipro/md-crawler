@@ -7,19 +7,23 @@
 ## 📂 Project Architecture
 
 ```
-├── markdown_files/          # Sample documentation hierarchy
-│   ├── index.md             # Documentation root index
-│   ├── getting-started.md   # Getting started guide
-│   ├── guides/              # Extended guides
-│   └── reference/           # API and configuration reference
+├── examples/
+│   ├── markdown_files/      # Sample documentation hierarchy
+│   │   ├── index.md         # Documentation root index
+│   │   ├── getting-started.md
+│   │   ├── guides/
+│   │   └── reference/
+│   ├── agent-demo.ts        # Agent execution example
+│   ├── chat-demo.ts         # Direct chat execution example
+│   └── non-streaming.ts     # Direct non-streaming example
 ├── src/
-│   ├── index.js             # CLI binary entry point
-│   ├── cli.js               # CLI options parsing, health checks & interactive loop
+│   ├── index.ts             # CLI binary entry point
+│   ├── cli.ts               # CLI options parsing, health checks & interactive loop
 │   └── core/
-│       ├── mlx_chat_llm.js  # Custom LangChain Chat Model with console streaming & robust SSE
-│       └── tools.js         # File system traversal, path validation & sitemap compiler
+│       ├── mlx_chat_llm.ts  # Custom LangChain Chat Model with console streaming & robust SSE
+│       └── tools.ts         # File system traversal, path validation & sitemap compiler
 ├── test/
-│   └── sse-parser.test.js   # Unit tests for the SSE line parser
+│   └── sse-parser.test.ts   # Unit tests for the SSE line parser
 ├── docs/
 │   └── LESSONS_LEARNED.md   # Detailed logs, architecture takeaways & design lessons
 ├── package.json             # Scripts and dependencies
@@ -39,9 +43,9 @@
 
 ---
 
-## 🔌 Core Highlight: Standalone MLX LLM Adapter (`src/core/mlx_chat_llm.js`)
+## 🔌 Core Highlight: Standalone MLX LLM Adapter (`src/core/mlx_chat_llm.ts`)
 
-The heart of the `md-crawler` is its custom, standalone chat model adapter located in [src/core/mlx_chat_llm.js](file:///Users/mohsinali/work/quick-repos/langchain-test/src/core/mlx_chat_llm.js). Rather than wrapping external clients, it inherits directly from LangChain's `BaseChatModel`.
+The heart of the `md-crawler` is its custom, standalone chat model adapter located in [src/core/mlx_chat_llm.ts](file:///Users/mohsinali/work/quick-repos/langchain-test/src/core/mlx_chat_llm.ts). Rather than wrapping external clients, it inherits directly from LangChain's `BaseChatModel`.
 
 ### Technical Key Strengths:
 1. **Direct Inherited Integration**: Subclasses `BaseChatModel` from `@langchain/core/language_models/chat_models`, making it 100% compatible with LangChain's native pipelines, system prompts, template formats, and callbacks.
@@ -87,7 +91,7 @@ pnpm md-crawler
 
 You can customize the parameters via CLI flags:
 ```bash
-pnpm md-crawler --docs-dir ./markdown_files --port 8080 --model mlx-community/Qwen3.5-9B-4bit --temperature 0.2
+pnpm md-crawler --docs-dir ./examples/markdown_files --port 8080 --model mlx-community/Qwen3.5-9B-4bit --temperature 0.2
 ```
 
 ---

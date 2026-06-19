@@ -7,7 +7,7 @@ This document details the architectural decisions, debugging journeys, and key l
 ## 📂 Project Architecture
 
 The md-crawler PoC is organized as follows:
-* **`markdown_files/`**: Hierarchical documentation files (`index.md`, `getting-started.md`, `guides/`, `reference/`) cross-linked via relative markdown links. Includes the auto-generated `.md-crawler-sitemap.json` sitemap.
+* **`examples/markdown_files/`**: Hierarchical documentation files (`index.md`, `getting-started.md`, `guides/`, `reference/`) cross-linked via relative markdown links. Includes the auto-generated `.md-crawler-sitemap.json` sitemap.
 * **`src/core/mlx_chat_llm.js`**: Standalone OpenAI-compatible custom LangChain Chat Model adapter linking local servers with SSE buffering and direct token streaming.
 * **[src/core/tools.js](file:///Users/mohsinali/work/quick-repos/langchain-test/src/core/tools.js)**: Tool definitions factory and the automated sitemap compiler that parses markdown headers to build light file summaries.
 * **[src/cli.js](file:///Users/mohsinali/work/quick-repos/langchain-test/src/cli.js)**: The main CLI executable runner, implementing options parsing, server diagnostics checks, and the readline interactive loop.
