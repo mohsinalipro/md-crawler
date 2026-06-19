@@ -16,7 +16,6 @@
   "scripts": {
     "build": "tsc",
     "md-crawler": "tsx src/index.ts",
-    "demo": "tsx examples/chat-demo.ts",
     "agent-demo": "tsx examples/agent-demo.ts",
     "non-streaming": "tsx examples/non-streaming.ts",
     "test": "tsx test/sse-parser.test.ts"

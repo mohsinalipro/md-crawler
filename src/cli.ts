@@ -95,7 +95,7 @@ async function main() {
     baseURL,
     model: options.model,
     temperature: options.temperature,
-    streamToConsole: true,
+    streamToConsole: false, // We handle display via streamEvents, not raw LLM output
   });
 
   const tools = createTools(docsPath);
@@ -103,7 +103,7 @@ async function main() {
   const agent = createAgent({
     model: llm,
     tools,
-    systemPrompt: `You are a documentation assistant. Your ONLY knowledge source is the local markdown documentation directory. Do not use prior knowledge — answer strictly from file contents you retrieve.
+    prompt: `You are a documentation assistant. Your ONLY knowledge source is the local markdown documentation directory. Do not use prior knowledge — answer strictly from file contents you retrieve.
 
 You have three tools:
 - read_documentation_sitemap: Returns titles and summaries of all documentation files.
@@ -158,12 +158,14 @@ If no file covers the topic, say so honestly — do not guess or fabricate infor
       messages.push({ role: "user", content: trimmedQuery });
 
       try {
-        const eventStream = (await agent.streamEvents(
+        const eventStream = agent.streamEvents(
           { messages },
           { version: "v2" }
-        )) as any;
+        ) as any;
 
         let lastAiMessage: any = null;
+        let streamingContent = "";
+        let hasPrintedHeader = false;
 
         for await (const event of eventStream) {
           const eventType = event.event;
@@ -177,12 +179,36 @@ If no file covers the topic, say so honestly — do not guess or fabricate infor
               ? event.data.output 
               : JSON.stringify(event.data.output);
             console.log(chalk.gray(`   Output Summary:\n${outputStr.substring(0, 300)}...`));
+          } else if (eventType === "on_chat_model_stream") {
+            // Stream AI tokens to console in real-time
+            const chunk = event.data?.chunk;
+            if (chunk) {
+              const content = typeof chunk.content === "string" ? chunk.content : "";
+              if (content) {
+                if (!hasPrintedHeader) {
+                  process.stdout.write(chalk.bold.yellow("\n🤖 [Agent starts reasoning...]\n"));
+                  hasPrintedHeader = true;
+                }
+                process.stdout.write(chalk.gray(content));
+                streamingContent += content;
+              }
+            }
           } else if (eventType === "on_chat_model_end") {
             const message = event.data.output?.generations?.[0]?.message || event.data.output;
             if (message) {
               lastAiMessage = message;
             }
           }
+        }
+
+        // Render final formatted markdown response if the last turn produced text
+        if (streamingContent && !lastAiMessage?.tool_calls?.length) {
+          const { marked } = await import("marked");
+          // @ts-ignore
+          const { markedTerminal } = await import("marked-terminal");
+          marked.use(markedTerminal());
+          console.log(chalk.bold.magenta("\n\n🎨 [Formatted Markdown Response]:"));
+          console.log(marked.parse(streamingContent));
         }
 
         if (lastAiMessage) {

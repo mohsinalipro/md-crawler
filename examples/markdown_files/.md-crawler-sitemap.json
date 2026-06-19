@@ -1,0 +1,37 @@
+[
+  {
+    "filePath": "getting-started.md",
+    "title": "🚀 Getting Started",
+    "summary": "This guide covers the core execution flow of `md-crawler`, how it runs, and how the interactive loop functions."
+  },
+  {
+    "filePath": "guides/advanced-usage.md",
+    "title": "⚡ Sitemap Indexing & Token Efficiency",
+    "summary": "This guide details how `md-crawler` indexes and traverses files with high token efficiency."
+  },
+  {
+    "filePath": "guides/customization.md",
+    "title": "🔌 Custom Chat LLM Adapter",
+    "summary": "This guide details the implementation of the OpenAI-compatible custom LangChain Chat Model in `src/core/mlx_chat_llm.ts`."
+  },
+  {
+    "filePath": "guides/index.md",
+    "title": "📚 md-crawler Architecture Guides",
+    "summary": "Detailed deep-dives outlining the custom LLM integration and the token-efficient traversal mechanisms inside `md-crawler`."
+  },
+  {
+    "filePath": "index.md",
+    "title": "🚀 md-crawler Documentation",
+    "summary": "Welcome to the documentation for **md-crawler**—a token-efficient local markdown documentation traversing agent shell. This folder houses the referenc"
+  },
+  {
+    "filePath": "reference/api-reference.md",
+    "title": "🔌 API Reference",
+    "summary": "Detailed specifications for classes, factories, and utility methods in `md-crawler`."
+  },
+  {
+    "filePath": "reference/configuration.md",
+    "title": "⚙️ Configuration & CLI Flags",
+    "summary": "Complete overview of option flags and environment configurations."
+  }
+]

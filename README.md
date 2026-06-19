@@ -14,7 +14,6 @@
 │   │   ├── guides/
 │   │   └── reference/
 │   ├── agent-demo.ts        # Agent execution example
-│   ├── chat-demo.ts         # Direct chat execution example
 │   └── non-streaming.ts     # Direct non-streaming example
 ├── src/
 │   ├── index.ts             # CLI binary entry point
