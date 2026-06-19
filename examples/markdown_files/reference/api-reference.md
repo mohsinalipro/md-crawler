@@ -1,50 +1,34 @@
-# API Reference Manual
+# 🔌 API Reference
 
-This document details the core classes, methods, parameters, and types available in the Antigravity SDK.
-
----
-
-## 🏗️ Class: `Agent`
-
-Main class used to initialize and run an autonomous execution thread.
-
-### Constructor Options (`AgentOptions`)
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `name` | `string` | `"Agent"` | The identifier of the agent. Used in logs and orchestration. |
-| `model` | `string` | `undefined` | The name of the LLM model to target (e.g., `gemini-2.5-flash`). |
-| `systemPrompt` | `string` | `""` | Base system instructions defining persona/limits. |
-| `tools` | `Tool[]` | `[]` | List of callable tools available to the agent. |
-
-### Methods
-
-#### `run(prompt: string): Promise<AgentResponse>`
-Executes the agent loop with a user prompt.
-
-* **Parameters**:
-  * `prompt`: The user's input/request.
-* **Returns**:
-  * `Promise<AgentResponse>`: Object containing `text` (response content) and `toolCalls` (any tools invoked).
+Detailed specifications for classes, factories, and utility methods in `md-crawler`.
 
 ---
 
-## 🛠️ Class: `Tool`
+## 🏗️ Chat Model: `MLXChatLLM`
+Subclasses LangChain's `BaseChatModel`.
 
-Class to wrap functions or APIs to make them discoverable and callable by the Agent.
-
-### Constructor Options (`ToolOptions`)
-
-| Option | Type | Description |
-| :--- | :--- | :--- |
-| `name` | `string` | Unique name of the tool (must not contain spaces). |
-| `description` | `string` | Clear description explaining *when* the agent should invoke it. |
-| `schema` | `object` | JSON Schema definitions of parameters expected. |
-| `execute` | `function` | Async/sync function that performs the action and returns results. |
+### API Specifications
+- `constructor(fields: MLXChatLLMFields)`: Configures target server, model endpoint, temperature, and console streaming.
+- `_generate(messages, options, runManager)`: Natively compiles chat generations.
+- `_streamResponseChunks(messages, options, runManager)`: Streams delta tokens and outputs reasoning monologues to stdout.
+- `bindTools(tools, options)`: Maps tools to OpenAI schemas.
 
 ---
 
-## 🔗 Related Resources
-* Refer to [Configuration Options](./configuration.md) to set global behaviors.
-* Go to [Getting Started](../getting-started.md) to build your first agent.
-* Return to [Home](../index.md).
+## 🛠️ Tools Factory: `createTools`
+Constructs the tool array for agent execution.
+
+### Tool Catalog
+1. **`list_markdown_files`**: Lists relative paths of markdown files recursively.
+2. **`read_markdown_file`**: Reads file content. Validates boundary safety.
+3. **`read_documentation_sitemap`**: Parses the sitemap dynamically.
+
+---
+
+## 🗃️ Indexer: `getOrCompileSitemap`
+Recursively indexes markdown directories and generates `.md-crawler-sitemap.json`.
+
+---
+
+## 🎨 Log Utilities: `formatToolInput`
+Pretty-prints tool parameters on standard output.

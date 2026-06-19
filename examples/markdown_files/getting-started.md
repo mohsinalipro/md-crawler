@@ -1,62 +1,38 @@
-# Getting Started with Antigravity SDK
+# 🚀 Getting Started
 
-This guide will help you install the SDK and build your first autonomous agent in less than 5 minutes.
-
----
-
-## 📋 Prerequisites
-
-Before installing, ensure your environment meets the following requirements:
-* **Node.js**: `v18.0.0` or higher
-* **Package Manager**: `npm`, `yarn`, or `pnpm`
-* **API Keys**: Access keys for your preferred LLM provider (e.g., OpenAI, Anthropic, or Gemini)
+This guide covers the core execution flow of `md-crawler`, how it runs, and how the interactive loop functions.
 
 ---
 
-## ⚙️ Installation
+## 🧐 Problem Overview
 
-To install the core package and its peer dependencies, run:
-
-```bash
-npm install @antigravity/sdk
-```
-
----
-
-## 🚀 Quick Start: Your First Agent
-
-Create a file named `agent.js` and paste the following code:
-
-```javascript
-import { Agent, Tool } from '@antigravity/sdk';
-
-// 1. Define a custom tool
-const calculator = new Tool({
-  name: 'calculator',
-  description: 'Add two numbers together',
-  execute: ({ a, b }) => a + b
-});
-
-// 2. Initialize the agent
-const agent = new Agent({
-  model: 'gemini-2.5-flash',
-  tools: [calculator],
-  systemPrompt: 'You are a helpful mathematical assistant.'
-});
-
-// 3. Run the agent
-const response = await agent.run('What is 256 + 512?');
-console.log(response.text);
-```
-
-For a comprehensive explanation of class options and return values, see the [API Reference](./reference/api-reference.md).
+In standard documentation agents, the typical solution is to read the entire workspace directory and pass all text files into the LLM context window. This approach suffers from:
+1. **High Token Costs**: Reading all files on every query consumes large volumes of context tokens.
+2. **Context Window Limitations**: Small local LLMs can run out of context capacity or lose accuracy when overloaded.
+3. **Inference Latency**: Processing massive context inputs increases completion times.
 
 ---
 
-## 🔗 Next Steps
+## ⚡ The md-crawler Architecture
 
-Now that your first agent is up and running, explore:
-* Learn how to chain multiple agents together in the [Advanced Agent Orchestration Guide](./guides/advanced-usage.md).
-* Add system behaviors and constraints via the [Customization Guide](./guides/customization.md).
-* View all available environment variables in the [Configuration Schema](./reference/configuration.md).
-* Go back to [Home](./index.md).
+`md-crawler` uses a **Query-Driven Crawling** pattern to solve this:
+1. **Dynamic Sitemap Mapping**: On initialization, the system indexes the target folder to create a lightweight JSON sitemap mapping filename headers and descriptions.
+2. **Targeted Reading**: When a query is received, the agent is constrained to read the sitemap first. It identifies the target file path and executes a tool call to read *only* that file, ignoring the rest of the filesystem.
+
+---
+
+## 🏃 Quick Start
+
+To run the agent:
+1. Start your local OpenAI-compatible MLX server on port `8080`:
+   ```bash
+   mlx_lm.server --model mlx-community/Qwen3.5-9B-4bit --port 8080
+   ```
+2. Launch the interactive CLI:
+   ```bash
+   pnpm md-crawler
+   ```
+3. Issue a test query:
+   > "Show the guide for custom chat LLM configuration."
+
+The terminal output will display the agent calling `read_documentation_sitemap` first, followed by a selective read on the target customization file.

@@ -1,52 +1,25 @@
-# Configuration Schema Reference
+# ⚙️ Configuration & CLI Flags
 
-This document outlines environment variables and file configuration formats for configuring global settings in the Antigravity SDK.
-
----
-
-## 🌍 Environment Variables
-
-Configure connection endpoints, API keys, and log settings using environment variables.
-
-| Variable | Description | Example |
-| :--- | :--- | :--- |
-| `ANTIGRAVITY_API_KEY` | Core API key for authentication. | `ag_live_8953...` |
-| `ANTIGRAVITY_LLM_PROVIDER` | Default provider for language models. | `openai`, `gemini`, `anthropic` |
-| `ANTIGRAVITY_LOG_LEVEL` | Verbosity of console logs. | `debug`, `info`, `warn`, `error` |
-| `ANTIGRAVITY_TIMEOUT_MS` | Maximum duration for tool execution before timing out. | `30000` |
+Complete overview of option flags and environment configurations.
 
 ---
 
-## 📄 File-Based Configuration: `antigravity.config.json`
+## 🏃 CLI Option Flags
 
-You can place an `antigravity.config.json` file in the root of your project directory to control retry budgets and sandboxing configurations.
+Use options flags when launching the main script:
 
-### Configuration Properties
-
-```json
-{
-  "version": "1.0.0",
-  "orchestration": {
-    "maxLoops": 15,
-    "fallbackOnModelError": true
-  },
-  "sandbox": {
-    "allowedWritePaths": ["./scratch", "./tmp"],
-    "allowedCommandPrefixes": ["git status", "git diff", "npm test"]
-  },
-  "retries": {
-    "maxAttempts": 3,
-    "initialDelayMs": 1000,
-    "backoffFactor": 2
-  }
-}
-```
-
-Refer to the [API Reference](./api-reference.md) for how the initialization of classes integrates these configurations.
+| Flag | Full Option | Default | Description |
+|---|---|---|---|
+| `-d` | `--docs-dir` | `./examples/markdown_files` | Target folder containing documentation. |
+| `-p` | `--port` | `8080` | Local OpenAI-compatible server port. |
+| `-m` | `--model` | `mlx-community/Qwen3.5-9B-4bit` | Model parameter name inside payload completions. |
+| `-t` | `--temperature` | `0.2` | Generation temperature (0 = deterministic, 1 = creative). |
+| `-h` | `--help` | N/A | Prints option details. |
 
 ---
 
-## 🔗 Related Resources
-* View detailed specifications in [API Reference](./api-reference.md).
-* Go back to [Getting Started](../getting-started.md).
-* Return to [Home](../index.md).
+## 🔒 Environment Variables
+
+Fallback environment variables checked by the system:
+- `MLX_API_BASE`: Target local model server endpoint (e.g. `http://localhost:8080`).
+- `MLX_MODEL_NAME`: Default model name parameter.

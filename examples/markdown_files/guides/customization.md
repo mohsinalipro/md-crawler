@@ -1,56 +1,53 @@
-# Agent Customization & Extensibility
+# 🔌 Custom Chat LLM Adapter
 
-Learn how to customize system behaviors, register custom tools, and define agent execution constraints.
+This guide details the implementation of the OpenAI-compatible custom LangChain Chat Model in `src/core/mlx_chat_llm.ts`.
 
 ---
 
-## 🎨 System Prompts and Instructions
+## 🏗️ Subclassing BaseChatModel
 
-You can tailor an agent's persona and instructions using the `systemPrompt` field.
+`MLXChatLLM` extends `@langchain/core/language_models/chat_models` directly:
+```typescript
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
+export default class MLXChatLLM extends BaseChatModel {
+  // Custom implementation
+}
+```
+This direct subclassing enables native LangChain bindings, callback management, templates, and agent orchestration.
+
+---
+
+## ⚡ Real-Time Console Monologue Streaming
+
+In LangGraph structures (e.g. `ReactAgent`), internal execution loops invoke the LLM using synchronous calls:
 ```javascript
-const assistant = new Agent({
-  systemPrompt: `You are an expert engineer. Always reply in clean markdown. Keep answers concise.`
-});
+const response = await model.invoke(messages);
+```
+This blocks standard event-based streaming and causes the console to freeze until the response completes.
+
+We solve this using the custom `streamToConsole: true` flag. In `_streamResponseChunks()`, we hook into the generator stream and print incoming reasoning monologues and message tokens directly to `stdout`:
+```typescript
+if (this.streamToConsole) {
+  process.stdout.write(chalk.gray(chunk.message.content));
+}
 ```
 
 ---
 
-## 🛠️ Adding Custom Tools
+## 🔌 Robust Server-Sent Events (SSE) Parsing
 
-Tools allow agents to interact with third-party APIs, filesystems, or local services. You define a tool by specifying its parameters, types, and execution function:
+To resolve issues where local servers stream fragmented TCP payloads, the model implements a line-buffered parser:
+```typescript
+buffer += decoder.decode(value, { stream: true });
+const lines = buffer.split("\n");
+buffer = lines.pop() || ""; // Buffer the incomplete line specifier
 
-```javascript
-import { Tool } from '@antigravity/sdk';
-
-const fetchUser = new Tool({
-  name: 'fetchUser',
-  description: 'Fetch user details by database ID',
-  schema: {
-    userId: 'string'
-  },
-  execute: async ({ userId }) => {
-    return await db.users.find(userId);
-  }
-});
+for (const line of lines) {
+  const trimmed = line.trim();
+  if (!trimmed) continue;
+  const chunk = this._parseSseLine(trimmed);
+  if (chunk) yield chunk;
+}
 ```
-
-To see complete parameters and options for creating tools, check the [API Reference](../reference/api-reference.md).
-
----
-
-## 🛡️ Sandbox & Permissions
-
-By default, agents run in a sandbox. You can limit their access using permissions in your configuration:
-
-* **File Access**: Read-only or read-write access to specific folders.
-* **Command Access**: Run a specific set of prefix commands (e.g., `git`, `npm run`).
-
-For information on how to structure these restrictions in a file, review the [Configuration Schema](../reference/configuration.md).
-
----
-
-## 🔗 Related Resources
-* Back to [Guides Index](./index.md)
-* Go to [Advanced Orchestration Guide](./advanced-usage.md)
-* Return to [Home](../index.md)
+This guarantees all text and tool calling chunks are processed without loss.

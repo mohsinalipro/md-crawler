@@ -1,51 +1,37 @@
-# Advanced Orchestration Guide
+# ⚡ Sitemap Indexing & Token Efficiency
 
-This guide walks you through multi-agent orchestration, state management, and custom recovery mechanisms in the Antigravity SDK.
-
----
-
-## 🤝 Multi-Agent Collaboration
-
-For complex tasks, a single agent can become overloaded or lose focus. The Antigravity SDK allows you to split tasks among specialized agents that can invoke each other.
-
-```javascript
-import { Orchestrator, Agent } from '@antigravity/sdk';
-
-// 1. Initialize specialized agents
-const researcher = new Agent({ name: 'researcher', role: 'Research Codebase' });
-const writer = new Agent({ name: 'writer', role: 'Write Markdown Content' });
-
-// 2. Wrap them in an Orchestrator
-const orchestrator = new Orchestrator({
-  agents: [researcher, writer]
-});
-
-// 3. Coordinate work
-const result = await orchestrator.execute('Research custom functions and write a guide.');
-```
-
-For classes details, please check the [API Reference](../reference/api-reference.md).
+This guide details how `md-crawler` indexes and traverses files with high token efficiency.
 
 ---
 
-## 💾 State Management
+## 🛠️ The Sitemap Compiler
 
-The orchestrator maintains a shared memory thread. Each agent can read from and write to this shared context using context keys:
+Located in `src/core/tools.ts`, `compileSitemap()` runs a recursive filesystem walk:
+1. It reads every `.md` file in the configured directory.
+2. It parses headers (e.g. lines starting with `#`) to extract page titles.
+3. It takes the first non-empty paragraph (capped at 150 characters) to use as a summary.
+4. It saves a lightweight sitemap map in `.md-crawler-sitemap.json`.
 
-```javascript
-// Within a custom tool or run block
-agent.context.set('research_notes', 'Found 3 custom functions...');
+---
+
+## 🛡️ Directory Traversal Security
+
+To prevent the LLM agent from traversing outside the boundaries of the designated target folder, a path boundary validation check is run:
+```typescript
+const safePath = path.normalize(input.filePath).replace(/^(\.\.(\/|\\))+/, '');
+const fullPath = path.resolve(resolvedDocsDir, safePath);
+
+if (!fullPath.startsWith(resolvedDocsDir)) {
+  return `Error: Access denied. Path must be inside the documentation directory.`;
+}
 ```
 
 ---
 
-## 🛠️ Error Recovery
+## 🧠 Sitemap Constraint Prompt
 
-Antigravity agents can automatically retry failed executions. You can customize the backoff strategies in your workspace config. Refer to [Configuration](../reference/configuration.md) for more details.
-
----
-
-## 🔗 Related Resources
-* Back to [Guides Index](./index.md)
-* Go to [Customization Guide](./customization.md)
-* Return to [Home](../index.md)
+The agent is forced to use the sitemap index dynamically by applying a strict constraint rule in `src/cli.ts`'s `systemPrompt`:
+```
+CRITICAL RULE: If the user query is related to "markdown", "docs", "documentation", or "files", you MUST ALWAYS call the 'read_documentation_sitemap' tool first to read the documentation sitemap...
+```
+This constraint ensures the agent scans the directory structure in one light sitemap call before executing specific file reads.
