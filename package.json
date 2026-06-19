@@ -1,0 +1,31 @@
+{
+  "name": "md-crawler",
+  "version": "1.0.0",
+  "description": "A token-efficient local markdown documentation traversing agent shell",
+  "main": "src/core/mlx_chat_llm.js",
+  "exports": {
+    ".": "./src/core/mlx_chat_llm.js"
+  },
+  "scripts": {
+    "md-crawler": "node src/cli.js",
+    "demo": "node examples/chat-demo.js",
+    "agent-demo": "node examples/agent-demo.js",
+    "non-streaming": "node examples/non-streaming.js",
+    "test": "node test/sse-parser.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "@langchain/core": "^1.2.0",
+    "@langchain/openai": "^1.5.1",
+    "chalk": "^5.6.2",
+    "langchain": "^1.5.0",
+    "marked": "^18.0.5",
+    "marked-terminal": "^7.3.0",
+    "openai": "^6.44.0",
+    "zod": "^4.4.3"
+  },
+  "type": "module"
+}
