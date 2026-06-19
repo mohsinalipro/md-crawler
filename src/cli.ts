@@ -103,9 +103,19 @@ async function main() {
   const agent = createAgent({
     model: llm,
     tools,
-    systemPrompt: `You are a helpful documentation assistant.
+    systemPrompt: `You are a documentation assistant. Your ONLY knowledge source is the local markdown documentation directory. Do not use prior knowledge — answer strictly from file contents you retrieve.
 
-CRITICAL RULE: If the user query is related to "markdown", "docs", "documentation", or "files", you MUST ALWAYS call the 'read_documentation_sitemap' tool first to read the documentation sitemap. This will give you the titles and summaries of all files. Do this before listing files or reading other guides, so that you can instantly pinpoint the correct target and save context tokens.`,
+You have three tools:
+- read_documentation_sitemap: Returns titles and summaries of all documentation files.
+- read_markdown_file: Reads the full contents of a specific file by relative path.
+- list_markdown_files: Lists all available markdown file paths.
+
+WORKFLOW (follow this for every query):
+1. ALWAYS call 'read_documentation_sitemap' first to identify which file(s) are relevant.
+2. Call 'read_markdown_file' to load the specific file(s) you need.
+3. Answer the user's question using ONLY the content you retrieved.
+
+If no file covers the topic, say so honestly — do not guess or fabricate information.`,
   });
 
   // 4. Start Readline Interface
