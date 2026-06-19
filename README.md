@@ -40,6 +40,8 @@
 - **Robust SSE Parser**: Implements standard line-buffering to prevent truncated TCP packets from skipping final tokens or tool calls.
 - **Rich Terminal Aesthetics**: Styled console outputs utilizing `chalk`, `marked`, and `marked-terminal` for fully rendered markdown headers, tables, code blocks, and color-coded tool executions.
 - **Directory Traversal Protection**: Secure path checking prevents the agent from resolving files outside the designated documentation directory.
+- **Configurable Output Formats**: Supports `text`, `json`, `jsonl`, and `structured` output modes — making it easy to pipe responses into other developer tools.
+- **Streaming Toggle**: Enable or disable real-time token streaming at startup via `--stream true|false`.
 
 ---
 
@@ -91,10 +93,44 @@ pnpm md-crawler
 
 You can customize the parameters via CLI flags:
 ```bash
-pnpm md-crawler --docs-dir ./examples/markdown_files --port 8080 --model mlx-community/Qwen3.5-9B-4bit --temperature 0.2
+pnpm md-crawler --docs-dir ./examples/markdown_files --port 8080 --model mlx-community/Qwen3.5-9B-4bit --temperature 0.2 --output-format json --stream false
 ```
 
+### CLI Options
+
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--docs-dir` | `-d` | Path to markdown docs folder | `./examples/markdown_files` |
+| `--port` | `-p` | Port of local MLX/OpenAI server | `8080` |
+| `--model` | `-m` | Model name | `mlx-community/Qwen3.5-9B-4bit` |
+| `--temperature` | `-t` | Generation temperature | `0.2` |
+| `--output-format` | `-o` | Output format (`text`, `json`, `jsonl`, `structured`) | `text` |
+| `--stream` | `-s` | Enable/disable streaming (`true`, `false`) | `true` |
+
 ---
+
+## 📦 Structured Output Schema
+
+When using `--output-format json`, `jsonl`, or `structured`, each response is emitted as a JSON object with the following schema:
+
+```typescript
+interface StructuredResponse {
+  query: string;                    // The user's original query
+  file_refs: string[];              // Array of file paths involved in the response
+  content: string;                  // The AI's response to the query
+  reasoning?: string;               // The agent's thought process (structured mode only)
+  tool_calls?: Array<{              // Tool calls made during the response
+    name: string;
+    args: Record<string, unknown>;
+  }>;
+  timestamp: string;                // ISO timestamp of the response
+}
+```
+
+Example usage with `jq`:
+```bash
+pnpm md-crawler --output-format json --stream false | jq '.file_refs'
+```
 
 ## 💬 Interactive CLI Commands
 
