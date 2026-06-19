@@ -20,8 +20,8 @@ async function run() {
     console.log(result);
     console.log("\n--- Done ---");
   } catch (err) {
-    console.error("Error:", err.message || err);
-    console.error(err.stack);
+    console.error("Error:", (err as any).message || err);
+    console.error((err as any).stack);
   }
 }
 

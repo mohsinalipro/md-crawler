@@ -7,12 +7,14 @@
  * Styled with chalk and marked for beautiful console outputs.
  */
 
-import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
-import { ChatGenerationChunk } from "@langchain/core/outputs";
+import { BaseChatModel, BaseChatModelParams } from "@langchain/core/language_models/chat_models";
+import { BaseMessage, AIMessage, AIMessageChunk, ToolMessage } from "@langchain/core/messages";
+import { ChatResult, ChatGenerationChunk } from "@langchain/core/outputs";
+import { CallbackManagerForLLMRun } from "@langchain/core/callbacks/manager";
 import { convertToOpenAITool } from "@langchain/core/utils/function_calling";
 import chalk from "chalk";
 import { marked } from "marked";
+// @ts-ignore
 import { markedTerminal } from "marked-terminal";
 
 // Configure marked to render markdown natively in the terminal
@@ -21,7 +23,7 @@ marked.use(markedTerminal());
 /**
  * Helper to convert message content (which can be a string or a nested block array) to a plain string.
  */
-function messageContentToString(content) {
+function messageContentToString(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     return content
@@ -35,15 +37,34 @@ function messageContentToString(content) {
   return "";
 }
 
+export interface MLXChatLLMFields extends BaseChatModelParams {
+  baseURL?: string;
+  model?: string;
+  temperature?: number;
+  streamToConsole?: boolean;
+}
+
+interface OpenAIResponseToolCall {
+  id?: string;
+  type?: "function";
+  function?: {
+    name?: string;
+    arguments?: string;
+  };
+  index?: number;
+}
+
 export default class MLXChatLLM extends BaseChatModel {
+  baseURL: string;
+  model: string;
+  temperature: number;
+  tools: Record<string, unknown>[];
+  streamToConsole: boolean;
+
   /**
-   * @param {object} fields Configuration fields
-   * @param {string} [fields.baseURL] Base URL of the MLX server (defaults to MLX_API_BASE env var or http://localhost:8080)
-   * @param {string} [fields.model] Model name to use (defaults to MLX_MODEL_NAME env var or mlx-community/Qwen3.5-9B-4bit)
-   * @param {number} [fields.temperature] Temperature parameter (defaults to 0.7)
-   * @param {boolean} [fields.streamToConsole] Enable direct stdout token printing (defaults to false)
+   * @param {MLXChatLLMFields} [fields] Configuration fields
    */
-  constructor(fields = {}) {
+  constructor(fields: MLXChatLLMFields = {}) {
     super(fields);
     this.baseURL = fields.baseURL || process.env.MLX_API_BASE || "http://localhost:8080";
     this.model = fields.model || process.env.MLX_MODEL_NAME || "mlx-community/Qwen3.5-9B-4bit";
@@ -52,11 +73,11 @@ export default class MLXChatLLM extends BaseChatModel {
     this.streamToConsole = fields.streamToConsole ?? false;
   }
 
-  _llmType() {
+  _llmType(): string {
     return "mlx-chat";
   }
 
-  _identifyingParams() {
+  _identifyingParams(): Record<string, unknown> {
     return {
       model: this.model,
       temperature: this.temperature,
@@ -66,10 +87,8 @@ export default class MLXChatLLM extends BaseChatModel {
 
   /**
    * Binds tools to the chat model for function calling.
-   * @param {any[]} tools Array of tools to bind
-   * @param {object} [options] Additional binding options
    */
-  bindTools(tools, options) {
+  bindTools(tools: Record<string, unknown>[], options?: Record<string, unknown>): this {
     const clone = Object.create(Object.getPrototypeOf(this));
     Object.assign(clone, this);
     clone.tools = tools.map((t) => convertToOpenAITool(t));
@@ -79,9 +98,13 @@ export default class MLXChatLLM extends BaseChatModel {
   /**
    * Handles non-streaming generation.
    */
-  async _generate(messages, options, runManager) {
+  async _generate(
+    messages: BaseMessage[],
+    options: this["ParsedCallOptions"],
+    runManager?: CallbackManagerForLLMRun
+  ): Promise<ChatResult> {
     if (!this.streamToConsole) {
-      const payload = {
+      const payload: Record<string, unknown> = {
         model: this.model,
         messages: this._convertMessages(messages),
         temperature: this.temperature,
@@ -106,24 +129,25 @@ export default class MLXChatLLM extends BaseChatModel {
         throw new Error(`MLX server error: ${res.status} ${txt}`);
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string; tool_calls?: OpenAIResponseToolCall[] } }> };
       const message = data?.choices?.[0]?.message;
       const content = message?.content || "";
       
       const tool_calls = message?.tool_calls?.map((tc) => {
-        let args = tc.function.arguments;
-        if (typeof args === "string") {
+        const args = tc.function?.arguments || "";
+        let parsedArgs: Record<string, any> = {};
+        if (typeof args === "string" && args.trim()) {
           try {
-            args = JSON.parse(args);
+            parsedArgs = JSON.parse(args);
           } catch (e) {
-            // Keep as string if parsing fails
+            parsedArgs = { rawArguments: args };
           }
         }
         return {
-          name: tc.function.name,
-          args,
+          name: tc.function?.name || "",
+          args: parsedArgs,
           id: tc.id || `call_${Math.random().toString(36).substr(2, 9)}`,
-          type: "tool_call"
+          type: "tool_call" as const
         };
       });
 
@@ -141,7 +165,7 @@ export default class MLXChatLLM extends BaseChatModel {
 
     // Stream generation and optionally print to console, then return final accumulated object
     let fullContent = "";
-    let toolCallsMap = {};
+    const toolCallsMap: Record<number, { id: string; name?: string; args: string }> = {};
 
     const stream = this._streamResponseChunks(messages, options, runManager);
 
@@ -152,8 +176,9 @@ export default class MLXChatLLM extends BaseChatModel {
           fullContent += message.content;
         }
         
-        if (message.tool_call_chunks && message.tool_call_chunks.length > 0) {
-          for (const tc of message.tool_call_chunks) {
+        const aiChunk = message as AIMessageChunk;
+        if (aiChunk.tool_call_chunks && aiChunk.tool_call_chunks.length > 0) {
+          for (const tc of aiChunk.tool_call_chunks) {
             const idx = tc.index ?? 0;
             if (!toolCallsMap[idx]) {
               toolCallsMap[idx] = {
@@ -171,19 +196,20 @@ export default class MLXChatLLM extends BaseChatModel {
     }
 
     const tool_calls = Object.values(toolCallsMap).map((tc) => {
-      let args = tc.args;
-      if (typeof args === "string" && args.trim()) {
+      let args: Record<string, any> = {};
+      const tcArgs = tc.args;
+      if (typeof tcArgs === "string" && tcArgs.trim()) {
         try {
-          args = JSON.parse(args);
+          args = JSON.parse(tcArgs);
         } catch (e) {
-          // Keep as string if parsing fails
+          args = { rawArguments: tcArgs };
         }
       }
       return {
-        name: tc.name,
+        name: tc.name || "",
         args,
         id: tc.id,
-        type: "tool_call"
+        type: "tool_call" as const
       };
     });
 
@@ -205,8 +231,12 @@ export default class MLXChatLLM extends BaseChatModel {
   /**
    * Streaming generation via LangChain's stream()
    */
-  async *_streamResponseChunks(messages, options, runManager) {
-    const payload = {
+  async *_streamResponseChunks(
+    messages: BaseMessage[],
+    options: this["ParsedCallOptions"],
+    runManager?: CallbackManagerForLLMRun
+  ): AsyncGenerator<ChatGenerationChunk> {
+    const payload: Record<string, unknown> = {
       model: this.model,
       messages: this._convertMessages(messages),
       temperature: this.temperature,
@@ -241,7 +271,7 @@ export default class MLXChatLLM extends BaseChatModel {
     let buffer = "";
     let hasPrintedHeader = false;
     let fullContent = "";
-    let toolCallsMap = {};
+    const toolCallsMap: Record<number, { index?: number; id?: string; name?: string; args?: string }> = {};
 
     while (true) {
       const { done, value } = await reader.read();
@@ -260,13 +290,14 @@ export default class MLXChatLLM extends BaseChatModel {
                   process.stdout.write(chalk.gray(chunk.message.content));
                 }
               }
-              if (chunk.message.tool_call_chunks) {
-                for (const tc of chunk.message.tool_call_chunks) {
+              const aiChunk = chunk.message as AIMessageChunk;
+              if (aiChunk.tool_call_chunks) {
+                for (const tc of aiChunk.tool_call_chunks) {
                   toolCallsMap[tc.index ?? 0] = tc;
                 }
               }
             }
-            if (runManager && chunk.message && chunk.message.content) {
+            if (runManager && chunk.message && typeof chunk.message.content === "string") {
               await runManager.handleLLMNewToken(chunk.message.content);
             }
             yield chunk;
@@ -291,17 +322,18 @@ export default class MLXChatLLM extends BaseChatModel {
                 if (!hasPrintedHeader) {
                   process.stdout.write(chalk.bold.yellow("\n🤖 [Agent starts reasoning...]\n"));
                   hasPrintedHeader = true;
-                }
+                  }
                 process.stdout.write(chalk.gray(chunk.message.content));
               }
             }
-            if (chunk.message.tool_call_chunks) {
-              for (const tc of chunk.message.tool_call_chunks) {
+            const aiChunk = chunk.message as AIMessageChunk;
+            if (aiChunk.tool_call_chunks) {
+              for (const tc of aiChunk.tool_call_chunks) {
                 toolCallsMap[tc.index ?? 0] = tc;
               }
             }
           }
-          if (runManager && chunk.message && chunk.message.content) {
+          if (runManager && chunk.message && typeof chunk.message.content === "string") {
             await runManager.handleLLMNewToken(chunk.message.content);
           }
           yield chunk;
@@ -319,12 +351,20 @@ export default class MLXChatLLM extends BaseChatModel {
     }
   }
 
-  _parseSseLine(line) {
+  _parseSseLine(line: string): ChatGenerationChunk | null {
     if (line.startsWith("data: ")) {
       const dataStr = line.slice(6).trim();
       if (dataStr === "[DONE]") return null;
       try {
-        const parsed = JSON.parse(dataStr);
+        const parsed = JSON.parse(dataStr) as {
+          choices?: Array<{
+            delta?: {
+              content?: string;
+              reasoning?: string;
+              tool_calls?: OpenAIResponseToolCall[];
+            };
+          }>;
+        };
         const content =
           parsed?.choices?.[0]?.delta?.content ||
           parsed?.choices?.[0]?.delta?.reasoning ||
@@ -360,35 +400,39 @@ export default class MLXChatLLM extends BaseChatModel {
     return null;
   }
 
-  _convertMessages(messages) {
+  _convertMessages(messages: BaseMessage[]): Record<string, unknown>[] {
     return messages.map((m) => {
       const role = this._messageRoleToString(m);
-      const item = {
+      const item: Record<string, unknown> = {
         role,
         content: messageContentToString(m.content),
       };
 
-      if (m._getType() === "ai" && m.tool_calls && m.tool_calls.length > 0) {
-        item.tool_calls = m.tool_calls.map((tc) => ({
-          id: tc.id || `call_${Math.random().toString(36).substr(2, 9)}`,
-          type: "function",
-          function: {
-            name: tc.name,
-            arguments: JSON.stringify(tc.args),
-          },
-        }));
+      if (m._getType() === "ai") {
+        const aiMsg = m as AIMessage;
+        if (aiMsg.tool_calls && aiMsg.tool_calls.length > 0) {
+          item.tool_calls = aiMsg.tool_calls.map((tc) => ({
+            id: tc.id || `call_${Math.random().toString(36).substr(2, 9)}`,
+            type: "function",
+            function: {
+              name: tc.name,
+              arguments: JSON.stringify(tc.args),
+            },
+          }));
+        }
       }
 
       if (m._getType() === "tool") {
-        item.tool_call_id = m.tool_call_id;
-        item.name = m.name;
+        const toolMsg = m as ToolMessage;
+        item.tool_call_id = toolMsg.tool_call_id;
+        item.name = toolMsg.name;
       }
 
       return item;
     });
   }
 
-  _messageRoleToString(message) {
+  _messageRoleToString(message: BaseMessage): string {
     const role = message._getType?.();
     if (role === "human") return "user";
     if (role === "ai") return "assistant";

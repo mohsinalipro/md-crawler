@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import path from "path";
 
 // Helper function to format tool inputs nicely in console logs
-export function formatToolInput(input) {
+export function formatToolInput(input: unknown): string {
   if (!input) return "{}";
   if (typeof input === "string") {
     try {
@@ -13,27 +13,34 @@ export function formatToolInput(input) {
       return input;
     }
   }
-  if (typeof input === "object") {
+  if (typeof input === "object" && input !== null) {
+    const obj = input as Record<string, unknown>;
     // Extract nested stringified JSON if present (common in LangChain tool wrapping)
-    if (Object.keys(input).length === 1 && typeof input.input === "string") {
+    if (Object.keys(obj).length === 1 && typeof obj.input === "string") {
       try {
-        const parsed = JSON.parse(input.input);
+        const parsed = JSON.parse(obj.input);
         return JSON.stringify(parsed, null, 2);
       } catch {
         // Fall through
       }
     }
-    return JSON.stringify(input, null, 2);
+    return JSON.stringify(obj, null, 2);
   }
   return String(input);
+}
+
+export interface SitemapItem {
+  filePath: string;
+  title: string;
+  summary: string;
 }
 
 /**
  * Scans documentation files recursively and compiles a sitemap file.
  */
-async function compileSitemap(docsDir) {
-  async function walk(dir) {
-    let results = [];
+async function compileSitemap(docsDir: string): Promise<SitemapItem[]> {
+  async function walk(dir: string): Promise<string[]> {
+    let results: string[] = [];
     const list = await fs.readdir(dir, { withFileTypes: true });
     for (const file of list) {
       const res = path.resolve(dir, file.name);
@@ -48,7 +55,7 @@ async function compileSitemap(docsDir) {
   }
 
   const files = await walk(docsDir);
-  const sitemap = [];
+  const sitemap: SitemapItem[] = [];
 
   for (const file of files) {
     const relativePath = path.relative(docsDir, file);
@@ -89,11 +96,11 @@ async function compileSitemap(docsDir) {
 /**
  * Loads sitemap or compiles it if missing.
  */
-export async function getOrCompileSitemap(docsDir) {
+export async function getOrCompileSitemap(docsDir: string): Promise<SitemapItem[]> {
   const sitemapPath = path.resolve(docsDir, ".md-crawler-sitemap.json");
   try {
     const data = await fs.readFile(sitemapPath, "utf-8");
-    return JSON.parse(data);
+    return JSON.parse(data) as SitemapItem[];
   } catch {
     return await compileSitemap(docsDir);
   }
@@ -102,15 +109,15 @@ export async function getOrCompileSitemap(docsDir) {
 /**
  * Factory to create tools dynamically based on target docs directory.
  */
-export function createTools(docsDir) {
+export function createTools(docsDir: string) {
   const resolvedDocsDir = path.resolve(docsDir);
 
   // 1. Tool to list all markdown files recursively in the docs directory
   const listMarkdownFiles = tool(
     async () => {
       try {
-        async function walk(dir) {
-          let results = [];
+        async function walk(dir: string): Promise<string[]> {
+          let results: string[] = [];
           const list = await fs.readdir(dir, { withFileTypes: true });
           for (const file of list) {
             const res = path.resolve(dir, file.name);
@@ -126,7 +133,7 @@ export function createTools(docsDir) {
         const files = await walk(resolvedDocsDir);
         return `Available documentation files in markdown directory:\n${files.map(f => `- ${f}`).join("\n")}`;
       } catch (error) {
-        return `Error listing markdown files: ${error.message}`;
+        return `Error listing markdown files: ${(error as Error).message}`;
       }
     },
     {
@@ -138,7 +145,7 @@ export function createTools(docsDir) {
 
   // 2. Tool to read the contents of a specific markdown file
   const readMarkdownFile = tool(
-    async (input) => {
+    async (input: { filePath: string }) => {
       try {
         // Prevent directory traversal attacks
         const safePath = path.normalize(input.filePath).replace(/^(\.\.(\/|\\))+/, '');
@@ -152,7 +159,7 @@ export function createTools(docsDir) {
         const content = await fs.readFile(fullPath, "utf-8");
         return `Content of ${input.filePath}:\n\n${content}`;
       } catch (error) {
-        return `Error reading file ${input.filePath}: ${error.message}`;
+        return `Error reading file ${input.filePath}: ${(error as Error).message}`;
       }
     },
     {
@@ -175,7 +182,7 @@ export function createTools(docsDir) {
         }
         return output;
       } catch (error) {
-        return `Error reading sitemap: ${error.message}`;
+        return `Error reading sitemap: ${(error as Error).message}`;
       }
     },
     {

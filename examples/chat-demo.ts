@@ -23,14 +23,14 @@ async function run() {
 
     for await (const chunk of stream) {
       if (chunk.content) {
-        process.stdout.write(chunk.content);
+        process.stdout.write(chunk.content as string);
       }
     }
 
     console.log("\n\n--- Done ---");
   } catch (err) {
-    console.error("Error:", err.message || err);
-    console.error(err.stack);
+    console.error("Error:", (err as any).message || err);
+    console.error((err as any).stack);
   }
 }
 

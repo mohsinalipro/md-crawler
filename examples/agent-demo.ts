@@ -37,7 +37,8 @@ console.log("Agent Conversation History:");
 for (const msg of result.messages) {
   const roleName = msg._getType() === "human" ? "User" : msg._getType() === "ai" ? "AI" : "Tool";
   console.log(`[${roleName}] content: ${JSON.stringify(msg.content)}`);
-  if (msg.tool_calls && msg.tool_calls.length > 0) {
-    console.log(`       tool_calls: ${JSON.stringify(msg.tool_calls)}`);
+  const anyMsg = msg as any;
+  if (anyMsg.tool_calls && anyMsg.tool_calls.length > 0) {
+    console.log(`       tool_calls: ${JSON.stringify(anyMsg.tool_calls)}`);
   }
 }

@@ -54,7 +54,7 @@ function printHelp() {
 }
 
 // 2. Local LLM Server Health Diagnostics
-async function checkServerHealth(baseURL) {
+async function checkServerHealth(baseURL: string) {
   try {
     const res = await fetch(`${baseURL}/v1/models`, { method: "GET" });
     return res.ok;
@@ -86,7 +86,7 @@ async function main() {
   try {
     await getOrCompileSitemap(docsPath);
   } catch (e) {
-    console.error(chalk.bold.red(`Failed to index documentation directory: ${e.message}`));
+    console.error(chalk.bold.red(`Failed to index documentation directory: ${(e as any).message}`));
     process.exit(1);
   }
 
@@ -148,12 +148,12 @@ CRITICAL RULE: If the user query is related to "markdown", "docs", "documentatio
       messages.push({ role: "user", content: trimmedQuery });
 
       try {
-        const eventStream = await agent.streamEvents(
+        const eventStream = (await agent.streamEvents(
           { messages },
           { version: "v2" }
-        );
+        )) as any;
 
-        let lastAiMessage = null;
+        let lastAiMessage: any = null;
 
         for await (const event of eventStream) {
           const eventType = event.event;
@@ -180,7 +180,7 @@ CRITICAL RULE: If the user query is related to "markdown", "docs", "documentatio
         }
         console.log(""); // Line break
       } catch (error) {
-        console.error(chalk.bold.red("\n❌ Error during execution:"), error.message || error);
+        console.error(chalk.bold.red("\n❌ Error during execution:"), (error as any).message || error);
       }
     }
   } finally {
