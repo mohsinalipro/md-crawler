@@ -4,6 +4,9 @@
   "description": "A token-efficient local markdown documentation traversing agent shell",
   "main": "dist/src/core/mlx_chat_llm.js",
   "types": "dist/src/core/mlx_chat_llm.d.ts",
+  "bin": {
+    "md-crawler": "./dist/src/index.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/src/core/mlx_chat_llm.d.ts",
@@ -12,7 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "md-crawler": "tsx src/cli.ts",
+    "md-crawler": "tsx src/index.ts",
     "demo": "tsx examples/chat-demo.ts",
     "agent-demo": "tsx examples/agent-demo.ts",
     "non-streaming": "tsx examples/non-streaming.ts",

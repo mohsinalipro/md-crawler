@@ -1,6 +1,6 @@
 # 🚀 md-crawler
 
-**md-crawler** is a token-efficient local markdown documentation traversing agent shell. Built on top of **LangChain**, it allows you to chat with your local documentation files using local LLMs (such as MLX or llama.cpp) by only loading and reading the minimum required files to answer queries, saving massive context window tokens.
+**md-crawler** is a token-efficient local markdown documentation traversing agent shell. Built on top of **LangChain**, it allows you to chat with your local documentation files using local LLMs (such as [MLX](https://github.com/ml-explore/mlx-lm) or llama.cpp) by only loading and reading the minimum required files to answer queries, saving massive context window tokens.
 
 ---
 
@@ -27,6 +27,7 @@
 ├── docs/
 │   └── LESSONS_LEARNED.md   # Detailed logs, architecture takeaways & design lessons
 ├── package.json             # Scripts and dependencies
+├── LICENSE                  # ISC License
 └── README.md                # This showcase documentation
 ```
 
@@ -35,7 +36,7 @@
 ## ✨ Features
 
 - **Token-Efficient Traversing**: Automatically compiles a `.md-crawler-sitemap.json` summarizing files and headers. The agent reads this sitemap first to pinpoint exactly which files are relevant before loading full text.
-- **Custom MLX Local LLM Integration**: Standalone custom OpenAI-compatible LangChain Chat Model adapter tailored for local servers (such as MLX, llama.cpp, Ollama).
+- **Custom [MLX](https://github.com/ml-explore/mlx-lm) Local LLM Integration**: Standalone custom OpenAI-compatible LangChain Chat Model adapter tailored for local servers (such as [MLX](https://github.com/ml-explore/mlx-lm), llama.cpp, Ollama).
 - **Direct Monologue & Output Streaming**: Bypasses the synchronous LangGraph ReactAgent `.invoke()` limitation by writing reasoning/output tokens directly to `process.stdout` in real-time.
 - **Robust SSE Parser**: Implements standard line-buffering to prevent truncated TCP packets from skipping final tokens or tool calls.
 - **Rich Terminal Aesthetics**: Styled console outputs utilizing `chalk`, `marked`, and `marked-terminal` for fully rendered markdown headers, tables, code blocks, and color-coded tool executions.
@@ -50,7 +51,7 @@ The heart of the `md-crawler` is its custom, standalone chat model adapter locat
 ### Technical Key Strengths:
 1. **Direct Inherited Integration**: Subclasses `BaseChatModel` from `@langchain/core/language_models/chat_models`, making it 100% compatible with LangChain's native pipelines, system prompts, template formats, and callbacks.
 2. **On-Demand Console Streaming (`streamToConsole: true`)**: Bypasses the limitation where LangGraph's internal `AgentNode` calls the LLM using synchronous `.invoke()`. It monitors token chunks inside its generator method (`_streamResponseChunks()`) and outputs reasoning and response tokens dynamically to standard output.
-3. **Resilient Chunk Buffer Parser**: Standard local model servers (like `mlx_lm.server`) often yield fragmented Server-Sent Event (SSE) packages. The class uses a strict line-buffered accumulator to ensure that no tokens, tool-calling JSON chunks, or final completions are omitted.
+3. **Resilient Chunk Buffer Parser**: Standard local model servers (like [`mlx_lm.server`](https://github.com/ml-explore/mlx-lm)) often yield fragmented Server-Sent Event (SSE) packages. The class uses a strict line-buffered accumulator to ensure that no tokens, tool-calling JSON chunks, or final completions are omitted.
 4. **Unified Tool Mapping**: Implements `.bindTools()` using LangChain's `convertToOpenAITool` schema conversion, letting you bind standard javascript tool definitions seamlessly.
 5. **Rich Terminal Formatting**: Features a built-in terminal markdown compiler configured via `marked` and `marked-terminal`, translating raw streamed text into fully formatted headers, tables, and colored boxes natively in the console.
 
@@ -61,8 +62,8 @@ The heart of the `md-crawler` is its custom, standalone chat model adapter locat
 ### 1. Prerequisites
 - **Node.js**: v18 or later
 - **pnpm** (or npm/yarn)
-- **MLX Local LLM Server Setup (Apple Silicon)**:
-  Install the MLX library:
+- **[MLX](https://github.com/ml-explore/mlx-lm) Local LLM Server Setup (Apple Silicon)**:
+  Install the [mlx-lm](https://github.com/ml-explore/mlx-lm) library:
   ```bash
   pip install mlx-lm
   ```
